@@ -47,12 +47,33 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 
 	threadInfo[numHilo].contPet = 0;
 
-	// ...
-
 	for (int i = 0; i < numPeticiones; i++) {
 		printf("[DEBUG] Peticion: %d, usuario: %d\n", i, numHilo);
 
-		// peticiones de socket
+		SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
+
+		if (s == INVALID_SOCKET) {
+			errorMessage("Ha ocurrido un error al inicializar el socket.");
+		}
+
+		sockaddr_in serv;
+		serv.sin_family = AF_INET;
+		serv.sin_addr.s_addr = inet_addr("156.35.103.10"); // placeholder, not the true server ip
+		serv.sin_port = htons(57000);
+		//cout << "Utilizando IP " << inet_ntoa(serv.sin_addr) << "..." << endl;
+		/*
+		int codigo = connect(s, (struct sockaddr *) &serv, sizeof(serv));
+		if (codigo == SOCKET_ERROR) {
+			errorMessage("Error al conectar al servidor.");
+		}
+		*/
+
+		// send
+		// receive
+
+		if (closesocket(s) != 0) {
+			errorMessage("Error al cerrar el socket.");
+		}
 
 		tiempo = GenerateExponentialDistribution((float)tReflex);
 
@@ -83,25 +104,6 @@ int main() {
 		errorMessage("Ha ocurrido un error al inicializar el uso de sockets.");
 	}
 
-	SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
-	
-	if (s == INVALID_SOCKET) {
-		errorMessage("Ha ocurrido un error al inicializar el socket.");
-	}
-
-	sockaddr_in serv;
-	serv.sin_family = AF_INET;
-	serv.sin_addr.s_addr = inet_addr("156.35.103.10"); // placeholder, not the true server ip
-	serv.sin_port = htons(57000);
-	cout << "Utilizando IP " << inet_ntoa(serv.sin_addr) << "..." << endl;
-	Sleep(2000);
-	/*
-	int codigo = connect(soc, (struct sockaddr *) &serv, sizeof(serv));
-	if (codigo == SOCKET_ERROR) {
-		errorMessage("Error al conectar al servidor.");
-	}
-	*/
-
 	for (int i = 0; i < numUsuarios; i++) {
 		parametro[i] = i;
 		handleThread[i] = CreateThread(NULL, 0, Usuario, &parametro[i], 0, NULL);
@@ -116,10 +118,6 @@ int main() {
 
 	// guardar y recopilar resultados
 
-	
-	if (closesocket(s) != 0) {
-		errorMessage("Error al cerrar el socket.");
-	}
 	WSACleanup();
 }
 
