@@ -76,7 +76,7 @@ int main() {
 	cin >> numUsuarios;
 	cout << "Introducir num. peticiones: ";
 	cin >> numPeticiones;
-	cout << "Tiempo de reflexión después de cada petición: ";
+	cout << "Tiempo de reflexion despues de cada peticion: ";
 	cin >> tReflex;
 
 	WORD wVersionRequested = MAKEWORD(2, 0);
@@ -85,10 +85,11 @@ int main() {
 		errorMessage("Ha ocurrido un error al inicializar el uso de sockets.");
 	}
 
-	SOCKET s = socket();
+	SOCKET s;
+	/*
 	if (s == INVALID_SOCKET) {
-		errorMessage("Ha ocurrido un error al inicializar el socket.")
-	}
+		errorMessage("Ha ocurrido un error al inicializar el socket.");
+	}*/
 
 	for (int i = 0; i < numUsuarios; i++) {
 		parametro[i] = i;
@@ -104,9 +105,10 @@ int main() {
 
 	// guardar y recopilar resultados
 
+	/*
 	if (closesocket(s) != 0) {
 		errorMessage("Error al cerrar el socket.");
-	}
+	}*/
 	WSACleanup();
 }
 
