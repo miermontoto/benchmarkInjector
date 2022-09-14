@@ -33,6 +33,11 @@ float GenerateExponentialDistribution(float average) {
 	return (-average) * logf(num);
 }
 
+void errorMessage(string message) {
+	cerr << message << endl;
+	exit(EXIT_FAILURE);
+}
+
 
 // ---
 
@@ -47,7 +52,9 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 
 	for (int i = 0; i < numPeticiones; i++) {
 		printf("[DEBUG] Petición: %d, usuario: %d\n", i, numHilo);
-		// hacer la petición
+
+
+
 
 		tiempo = GenerateExponentialDistribution((float)tReflex);
 
@@ -72,17 +79,34 @@ int main() {
 	cout << "Tiempo de reflexión después de cada petición: ";
 	cin >> tReflex;
 
+	WORD wVersionRequested = MAKEWORD(2, 0);
+	WSAData wsaData;
+	if (WSAStartup(wVersionRequested, &wsaData) != 0) {
+		errorMessage("Ha ocurrido un error al inicializar el uso de sockets.");
+	}
+
+	SOCKET s = socket();
+	if (s == INVALID_SOCKET) {
+		errorMessage("Ha ocurrido un error al inicializar el socket.")
+	}
+
 	for (int i = 0; i < numUsuarios; i++) {
 		parametro[i] = i;
 		handleThread[i] = CreateThread(NULL, 0, Usuario, &parametro[i], 0, NULL);
 		if (handleThread[i] == NULL) {
-			cerr << "Error al lanzar el hilo." << endl;
-			exit(EXIT_FAILURE);
+			errorMessage("Error al lanzar el hilo.");
 		}
+	}
+
+	for (int i = 0; i < numUsuarios; i++) { // el hilo principal espera por sus hijos.
 		WaitForSingleObject(handleThread[i], INFINITE);
 	}
 
 	// guardar y recopilar resultados
 
+	if (closesocket(s) != 0) {
+		errorMessage("Error al cerrar el socket.");
+	}
+	WSACleanup();
 }
 
