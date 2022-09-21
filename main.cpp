@@ -3,8 +3,8 @@
 #include <fstream> // save results to file
 using namespace std; // this removes the need of writing "std::"" every time.
 
-constexpr auto MAXUSUARIOS = 10;
-constexpr auto MAXPETICIONES = 10;
+constexpr auto MAXUSUARIOS = 50;
+constexpr auto MAXPETICIONES = 50;
 constexpr auto PUERTO = 57000;
 constexpr auto TAM_PET = 1250;
 constexpr auto TAM_RES = 1250;
@@ -120,6 +120,10 @@ int main(int argc, char *argv[]) {
 		numUsuarios = atoi(argv[1]);
 		numPeticiones = atoi(argv[2]);
 		tReflex = atoi(argv[3]);
+	}
+
+	if (numUsuarios > MAXUSUARIOS || numPeticiones > MAXPETICIONES) {
+		errorMessage("Arumentos invalidos.");
 	}
 
 	// init socket connection
