@@ -1,5 +1,6 @@
 #include <windows.h> // DWORD, HANDLE, WINAPI
 #include <iostream> // cerr, endl
+#include <fstream> // save results to file
 using namespace std; // this removes the need of writing "std::"" every time.
 
 constexpr auto MAXUSUARIOS = 10;
@@ -147,18 +148,34 @@ int main(int argc, char *argv[]) {
 
 	WSACleanup();
 
+	ofstream output("output.csv");
+	output << "User,Counter,";
+	for (int i = 0; i < numUsuarios; i++) {
+		output << "Time" << i << ",";
+	}
+	output << "Total" << endl;
+
 	cout << endl << "RESULTADOS:" << endl;
 	for (int i = 0; i < numUsuarios; i++) {
-		cout << "Usuario: " << i << ", contador: " << threadInfo[i].contPet;
+		auto cont = threadInfo[i].contPet;
+		cout << "Usuario: " << i << ", contador: " << cont;
+		output << i << "," << cont << ",";
+		
 		cout << ", tiempos: ";
-
 		float totalReflex = 0;
 		for (int j = 0; j < numPeticiones; j++) {
-			cout << threadInfo[i].reflex[j] << " ";
-			totalReflex += threadInfo[i].reflex[j];
+			auto reflex = threadInfo[i].reflex[j];
+
+			cout << reflex << " ";
+			output << reflex << ",";
+
+			totalReflex += reflex;
 		}
+
 		cout << ", tiempo total: " << totalReflex << endl;
+		output << totalReflex << endl;
 	}
-	
+
+	output.close();
 }
 
