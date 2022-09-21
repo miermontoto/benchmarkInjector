@@ -3,11 +3,11 @@
 #include <fstream> // save results to file
 using namespace std; // this removes the need of writing "std::"" every time.
 
-constexpr auto MAXUSUARIOS = 50;
-constexpr auto MAXPETICIONES = 50;
-constexpr auto PUERTO = 57000;
-constexpr auto TAM_PET = 1250;
-constexpr auto TAM_RES = 1250;
+constexpr unsigned int MAXUSUARIOS = 100;
+constexpr unsigned int MAXPETICIONES = 100;
+constexpr unsigned int PUERTO = 57000;
+constexpr unsigned int TAM_PET = 1250;
+constexpr unsigned int TAM_RES = 1250;
 constexpr auto SERVERIP = "127.0.0.1";
 
 unsigned int numUsuarios;
@@ -46,10 +46,7 @@ void errorMessage(string message) {
 // ---
 
 DWORD WINAPI Usuario(LPVOID parametro) {
-	DWORD dwResult = 0;
 	int numHilo = *((int*) parametro);
-	float tiempo;
-	SOCKET s;
 	char peticion[TAM_PET];
 	char respuesta[TAM_RES];
 
@@ -58,7 +55,7 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 	for (int i = 0; i < numPeticiones; i++) {
 		//printf("[DEBUG] Peticion: %d, usuario: %d\n", i, numHilo);
 
-		s = socket(AF_INET, SOCK_STREAM, 0);
+		SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
 
 		if (s == INVALID_SOCKET) {
 			errorMessage("Ha ocurrido un error al inicializar el socket.");
@@ -92,14 +89,15 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 			errorMessage("Error al cerrar el socket.");
 		}
 
-		tiempo = GenerateExponentialDistribution((float)tReflex);
+		float tiempo = GenerateExponentialDistribution((float)tReflex);
 
 		threadInfo[numHilo].reflex[i] = tiempo;
 		threadInfo[numHilo].contPet++;
 
-		Sleep(tiempo);
+		Sleep(tiempo*1000);
 	}
-	return dwResult;
+
+	return 0;
 }
 
 
@@ -119,7 +117,7 @@ int main(int argc, char *argv[]) {
 	else {
 		numUsuarios = atoi(argv[1]);
 		numPeticiones = atoi(argv[2]);
-		tReflex = atoi(argv[3]);
+		tReflex = atof(argv[3]);
 	}
 
 	if (numUsuarios > MAXUSUARIOS || numPeticiones > MAXPETICIONES) {
