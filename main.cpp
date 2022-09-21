@@ -101,16 +101,23 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 
 
 
-int main() {
+int main(int argc, char *argv[]) {
 	HANDLE handleThread[MAXUSUARIOS];
 	int parametro[MAXUSUARIOS];
 
-	cout << "Introducir num. usuarios: ";
-	cin >> numUsuarios;
-	cout << "Introducir num. peticiones: ";
-	cin >> numPeticiones;
-	cout << "Tiempo de reflexion despues de cada peticion: ";
-	cin >> tReflex;
+	if (argc != 4) {
+		cout << "Introducir num. usuarios: ";
+		cin >> numUsuarios;
+		cout << "Introducir num. peticiones: ";
+		cin >> numPeticiones;
+		cout << "Tiempo de reflexion despues de cada peticion: ";
+		cin >> tReflex;
+	}
+	else {
+		numUsuarios = atoi(argv[1]);
+		numPeticiones = atoi(argv[2]);
+		tReflex = atoi(argv[3]);
+	}
 
 	WORD wVersionRequested = MAKEWORD(2, 0);
 	WSAData wsaData;
