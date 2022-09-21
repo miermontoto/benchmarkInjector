@@ -9,8 +9,8 @@ constexpr auto TAM_PET = 1250;
 constexpr auto TAM_RES = 1250;
 constexpr auto SERVERIP = "127.0.0.1";
 
-int numUsuarios;
-int numPeticiones;
+unsigned int numUsuarios;
+unsigned int numPeticiones;
 float tReflex;
 
 typedef struct {
@@ -55,7 +55,7 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 	threadInfo[numHilo].contPet = 0;
 
 	for (int i = 0; i < numPeticiones; i++) {
-		printf("[DEBUG] Peticion: %d, usuario: %d\n", i, numHilo);
+		//printf("[DEBUG] Peticion: %d, usuario: %d\n", i, numHilo);
 
 		s = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -83,6 +83,8 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 		if (recv(s, respuesta, sizeof(respuesta), 0) != TAM_RES) {
 			errorMessage("Error al recibir la respuesta.");
 		}
+
+		cout << ". ";
 
 		// close
 		if (closesocket(s) != 0) {
@@ -119,6 +121,7 @@ int main(int argc, char *argv[]) {
 		tReflex = atoi(argv[3]);
 	}
 
+	// init socket connection
 	WORD wVersionRequested = MAKEWORD(2, 0);
 	WSAData wsaData;
 	if (WSAStartup(wVersionRequested, &wsaData) != 0) {
@@ -129,6 +132,7 @@ int main(int argc, char *argv[]) {
 		errorMessage("La liberia no soporta la version 2.0");
 	}
 
+	cout << "Transmitiendo ";
 	for (int i = 0; i < numUsuarios; i++) {
 		parametro[i] = i;
 		handleThread[i] = CreateThread(NULL, 0, Usuario, &parametro[i], 0, NULL);
@@ -143,6 +147,18 @@ int main(int argc, char *argv[]) {
 
 	WSACleanup();
 
-	// guardar y recopilar resultados
+	cout << endl << "RESULTADOS:" << endl;
+	for (int i = 0; i < numUsuarios; i++) {
+		cout << "Usuario: " << i << ", contador: " << threadInfo[i].contPet;
+		cout << ", tiempos: ";
+
+		float totalReflex = 0;
+		for (int j = 0; j < numPeticiones; j++) {
+			cout << threadInfo[i].reflex[j] << " ";
+			totalReflex += threadInfo[i].reflex[j];
+		}
+		cout << ", tiempo total: " << totalReflex << endl;
+	}
+	
 }
 
