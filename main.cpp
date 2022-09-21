@@ -4,6 +4,10 @@ using namespace std; // this removes the need of writing "std::"" every time.
 
 constexpr auto MAXUSUARIOS = 10;
 constexpr auto MAXPETICIONES = 10;
+constexpr auto PUERTO = 57000;
+constexpr auto TAM_PET = 1250;
+constexpr auto TAM_RES = 1250;
+constexpr auto SERVERIP = "127.0.0.1";
 
 int numUsuarios;
 int numPeticiones;
@@ -44,13 +48,16 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 	DWORD dwResult = 0;
 	int numHilo = *((int*) parametro);
 	float tiempo;
+	SOCKET s;
+	char peticion[TAM_PET];
+	char respuesta[TAM_RES];
 
 	threadInfo[numHilo].contPet = 0;
 
 	for (int i = 0; i < numPeticiones; i++) {
 		printf("[DEBUG] Peticion: %d, usuario: %d\n", i, numHilo);
 
-		SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
+		s = socket(AF_INET, SOCK_STREAM, 0);
 
 		if (s == INVALID_SOCKET) {
 			errorMessage("Ha ocurrido un error al inicializar el socket.");
@@ -58,19 +65,26 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 
 		sockaddr_in serv;
 		serv.sin_family = AF_INET;
-		serv.sin_addr.s_addr = inet_addr("156.35.103.10"); // placeholder, not the true server ip
-		serv.sin_port = htons(57000);
+		serv.sin_addr.s_addr = inet_addr(SERVERIP); // placeholder, not the true server ip
+		serv.sin_port = htons(57000 + numHilo);
 		//cout << "Utilizando IP " << inet_ntoa(serv.sin_addr) << "..." << endl;
-		/*
-		int codigo = connect(s, (struct sockaddr *) &serv, sizeof(serv));
-		if (codigo == SOCKET_ERROR) {
+
+		// connect
+		if (connect(s, (struct sockaddr*) & serv, sizeof(serv)) == SOCKET_ERROR) {
 			errorMessage("Error al conectar al servidor.");
 		}
-		*/
 
 		// send
-		// receive
+		if (send(s, peticion, sizeof(peticion), 0) == SOCKET_ERROR) {
+			errorMessage("Error al enviar una cadena.");
+		}
 
+		// receive
+		if (recv(s, respuesta, sizeof(respuesta), 0) != TAM_RES) {
+			errorMessage("Error al recibir la respuesta.");
+		}
+
+		// close
 		if (closesocket(s) != 0) {
 			errorMessage("Error al cerrar el socket.");
 		}
@@ -104,6 +118,10 @@ int main() {
 		errorMessage("Ha ocurrido un error al inicializar el uso de sockets.");
 	}
 
+	if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 0) {
+		errorMessage("La liberia no soporta la version 2.0");
+	}
+
 	for (int i = 0; i < numUsuarios; i++) {
 		parametro[i] = i;
 		handleThread[i] = CreateThread(NULL, 0, Usuario, &parametro[i], 0, NULL);
@@ -116,8 +134,8 @@ int main() {
 		WaitForSingleObject(handleThread[i], INFINITE);
 	}
 
-	// guardar y recopilar resultados
-
 	WSACleanup();
+
+	// guardar y recopilar resultados
 }
 
