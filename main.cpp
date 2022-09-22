@@ -1,25 +1,29 @@
+// all lines of code have been manually coded.
+// the structure resembles the original code structures provided, but nothing has been directly copied.
+// Juan Mier (UO283319) '22
+
 #include <windows.h> // DWORD, HANDLE, WINAPI
-#include <iostream> // cerr, endl
+#include <iostream> // cout, cerr, endl
 #include <fstream> // save results to file
 using namespace std; // this removes the need of writing "std::"" every time.
 
-constexpr unsigned int MAXUSUARIOS = 100;
-constexpr unsigned int MAXPETICIONES = 100;
-constexpr unsigned int PUERTO = 57000;
-constexpr unsigned int TAM_PET = 1250;
-constexpr unsigned int TAM_RES = 1250;
-constexpr auto SERVERIP = "127.0.0.1";
+constexpr unsigned int MAXUSERS = 100;
+constexpr unsigned int MAXPETITIONS = 100;
+constexpr unsigned int PORT = 57000;
+constexpr unsigned int PETITION_SIZE = 1250;
+constexpr unsigned int RESPONSE_SIZE = 1250;
+constexpr auto SERVERIP = "127.0.0.1"; // currently localhost
 
-unsigned int numUsuarios;
-unsigned int numPeticiones;
-float tReflex;
+unsigned int totalUsers;
+unsigned int petitionsPerUser;
+float reflexTime;
 
 typedef struct {
 	int contPet;
-	float reflex[MAXPETICIONES];
+	float reflex[MAXPETITIONS];
 } threadParams;
 
-threadParams threadInfo[MAXUSUARIOS];
+threadParams threadInfo[MAXUSERS];
 
 // ---
 
@@ -45,14 +49,14 @@ void errorMessage(string message) {
 
 // ---
 
-DWORD WINAPI Usuario(LPVOID parametro) {
-	int numHilo = *((int*) parametro);
-	char peticion[TAM_PET];
-	char respuesta[TAM_RES];
+DWORD WINAPI Usuario(LPVOID parameter) {
+	int threadNum = *((int*) parameter);
+	char petition[PETITION_SIZE];
+	char response[RESPONSE_SIZE];
 
-	threadInfo[numHilo].contPet = 0;
+	threadInfo[threadNum].contPet = 0;
 
-	for (int i = 0; i < numPeticiones; i++) {
+	for (int i = 0; i < petitionsPerUser; i++) {
 		//printf("[DEBUG] Peticion: %d, usuario: %d\n", i, numHilo);
 
 		SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
@@ -63,9 +67,8 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 
 		sockaddr_in serv;
 		serv.sin_family = AF_INET;
-		serv.sin_addr.s_addr = inet_addr(SERVERIP); // placeholder, not the true server ip
-		serv.sin_port = htons(57000 + numHilo);
-		//cout << "Utilizando IP " << inet_ntoa(serv.sin_addr) << "..." << endl;
+		serv.sin_addr.s_addr = inet_addr(SERVERIP);
+		serv.sin_port = htons(PORT + threadNum);
 
 		// connect
 		if (connect(s, (struct sockaddr*) & serv, sizeof(serv)) == SOCKET_ERROR) {
@@ -73,12 +76,12 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 		}
 
 		// send
-		if (send(s, peticion, sizeof(peticion), 0) == SOCKET_ERROR) {
+		if (send(s, petition, sizeof(petition), 0) == SOCKET_ERROR) {
 			errorMessage("Error al enviar una cadena.");
 		}
 
 		// receive
-		if (recv(s, respuesta, sizeof(respuesta), 0) != TAM_RES) {
+		if (recv(s, response, sizeof(response), 0) != RESPONSE_SIZE) {
 			errorMessage("Error al recibir la respuesta.");
 		}
 
@@ -89,10 +92,10 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 			errorMessage("Error al cerrar el socket.");
 		}
 
-		float tiempo = GenerateExponentialDistribution((float)tReflex);
+		float tiempo = GenerateExponentialDistribution((float)reflexTime);
 
-		threadInfo[numHilo].reflex[i] = tiempo;
-		threadInfo[numHilo].contPet++;
+		threadInfo[threadNum].reflex[i] = tiempo;
+		threadInfo[threadNum].contPet++;
 
 		Sleep(tiempo*1000);
 	}
@@ -103,24 +106,30 @@ DWORD WINAPI Usuario(LPVOID parametro) {
 
 
 int main(int argc, char *argv[]) {
-	HANDLE handleThread[MAXUSUARIOS];
-	int parametro[MAXUSUARIOS];
+	HANDLE handleThread[MAXUSERS];
+	int parametro[MAXUSERS];
 
 	if (argc != 4) {
 		cout << "Introducir num. usuarios: ";
-		cin >> numUsuarios;
-		cout << "Introducir num. peticiones: ";
-		cin >> numPeticiones;
+		cin >> totalUsers;
+		cout << "Introducir num. peticiones por usuario: ";
+		cin >> petitionsPerUser;
 		cout << "Tiempo de reflexion despues de cada peticion: ";
-		cin >> tReflex;
+		cin >> reflexTime;
 	}
 	else {
-		numUsuarios = atoi(argv[1]);
-		numPeticiones = atoi(argv[2]);
-		tReflex = atof(argv[3]);
+		totalUsers = atoi(argv[1]);
+		petitionsPerUser = atoi(argv[2]);
+		reflexTime = atof(argv[3]);
+
+		cout << "Num. usuarios: " << totalUsers << endl;
+		cout << "Num. peticiones: " << petitionsPerUser << endl;
+		cout << "Tiempo de reflexion: " << reflexTime << endl;
 	}
 
-	if (numUsuarios > MAXUSUARIOS || numPeticiones > MAXPETICIONES) {
+	cout << "Utilizando IP " << SERVERIP << endl;
+
+	if (totalUsers > MAXUSERS || petitionsPerUser > MAXPETITIONS) {
 		errorMessage("Arumentos invalidos.");
 	}
 
@@ -136,7 +145,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	cout << "Transmitiendo ";
-	for (int i = 0; i < numUsuarios; i++) {
+	for (int i = 0; i < totalUsers; i++) {
 		parametro[i] = i;
 		handleThread[i] = CreateThread(NULL, 0, Usuario, &parametro[i], 0, NULL);
 		if (handleThread[i] == NULL) {
@@ -144,7 +153,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	for (int i = 0; i < numUsuarios; i++) { // el hilo principal espera por sus hijos.
+	for (int i = 0; i < totalUsers; i++) { // el hilo principal espera por sus hijos.
 		WaitForSingleObject(handleThread[i], INFINITE);
 	}
 
@@ -152,29 +161,26 @@ int main(int argc, char *argv[]) {
 
 	ofstream output("output.csv");
 	output << "User,Counter,";
-	for (int i = 0; i < numUsuarios; i++) {
+	for (int i = 0; i < totalUsers; i++) {
 		output << "Time" << i << ",";
 	}
 	output << "Total" << endl;
 
 	cout << endl << "RESULTADOS:" << endl;
-	for (int i = 0; i < numUsuarios; i++) {
+	for (int i = 0; i < totalUsers; i++) {
 		auto cont = threadInfo[i].contPet;
 		cout << "Usuario: " << i << ", contador: " << cont;
 		output << i << "," << cont << ",";
 		
-		cout << ", tiempos: ";
 		float totalReflex = 0;
-		for (int j = 0; j < numPeticiones; j++) {
+		for (int j = 0; j < petitionsPerUser; j++) {
 			auto reflex = threadInfo[i].reflex[j];
-
-			cout << reflex << " ";
 			output << reflex << ",";
-
 			totalReflex += reflex;
 		}
 
-		cout << ", tiempo total: " << totalReflex << endl;
+		cout << ", tiempo total de espera: " << totalReflex;
+		cout << " (medio: " << totalReflex / petitionsPerUser << ")" << endl;
 		output << totalReflex << endl;
 	}
 
