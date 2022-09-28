@@ -1,26 +1,34 @@
-// all lines of code have been manually coded.
-// the structure resembles the original code structures provided, but nothing has been directly copied.
 // Juan Mier (UO283319) '22
 
 #include <windows.h> // DWORD, HANDLE, WINAPI
 #include <iostream> // cout, cerr, endl
 #include <fstream> // save results to file
+#include <time.h> // time, time_t, QueryPerformance
+#include <math.h> // HighPart, LowPart, QuadPart
 using namespace std; // this removes the need of writing "std::"" every time.
 
-constexpr unsigned int MAXUSERS = 100;
-constexpr unsigned int MAXPETITIONS = 100;
+constexpr unsigned int MAXUSERS = 1000;
+constexpr unsigned int MAXPETITIONS = 1000;
 constexpr unsigned int PORT = 57000;
 constexpr unsigned int PETITION_SIZE = 1250;
 constexpr unsigned int RESPONSE_SIZE = 1250;
-constexpr auto SERVERIP = "127.0.0.1"; // currently localhost
+constexpr auto SERVERIP = "127.0.0.1"; // 192.168.203.231
 
 unsigned int totalUsers;
 unsigned int petitionsPerUser;
 float reflexTime;
+float ticksPerMs;
+LARGE_INTEGER tickBase;
+LARGE_INTEGER tickStart;
+LARGE_INTEGER tickEnd;
 
 typedef struct {
-	int contPet;
+	int petitionCounter;
 	float reflex[MAXPETITIONS];
+	float responseTime[MAXPETITIONS];
+	unsigned long ciclosIniPeticion[MAXPETITIONS];
+	unsigned long ciclosFinPeticion[MAXPETITIONS];
+
 } threadParams;
 
 threadParams threadInfo[MAXUSERS];
@@ -47,23 +55,38 @@ void errorMessage(string message) {
 	exit(EXIT_FAILURE);
 }
 
+double TimeDiff(LARGE_INTEGER start, LARGE_INTEGER end) {
+	LARGE_INTEGER diff;
+
+	diff.QuadPart = end.QuadPart - start.QuadPart;
+	float ms = diff.LowPart / ticksPerMs;
+	if (diff.HighPart != 0) {
+		ms += (float)ldexp((double)diff.HighPart, 32) / ticksPerMs;
+	}
+	return ms;
+}
+
 // ---
 
 DWORD WINAPI Usuario(LPVOID parameter) {
 	int threadNum = *((int*) parameter);
 	char petition[PETITION_SIZE];
 	char response[RESPONSE_SIZE];
+	LARGE_INTEGER timeStart, timeEnd;
 
-	threadInfo[threadNum].contPet = 0;
+	threadInfo[threadNum].petitionCounter = 0;
 
-	for (int i = 0; i < petitionsPerUser; i++) {
+	do {
 		//printf("[DEBUG] Peticion: %d, usuario: %d\n", i, numHilo);
 
 		SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
 
 		if (s == INVALID_SOCKET) {
+			WSACleanup();
 			errorMessage("Ha ocurrido un error al inicializar el socket.");
 		}
+
+		QueryPerformanceCounter(&timeStart);
 
 		sockaddr_in serv;
 		serv.sin_family = AF_INET;
@@ -72,16 +95,19 @@ DWORD WINAPI Usuario(LPVOID parameter) {
 
 		// connect
 		if (connect(s, (struct sockaddr*) & serv, sizeof(serv)) == SOCKET_ERROR) {
+			WSACleanup();
 			errorMessage("Error al conectar al servidor.");
 		}
 
 		// send
 		if (send(s, petition, sizeof(petition), 0) == SOCKET_ERROR) {
+			WSACleanup();
 			errorMessage("Error al enviar una cadena.");
 		}
 
 		// receive
 		if (recv(s, response, sizeof(response), 0) != RESPONSE_SIZE) {
+			WSACleanup();
 			errorMessage("Error al recibir la respuesta.");
 		}
 
@@ -89,16 +115,29 @@ DWORD WINAPI Usuario(LPVOID parameter) {
 
 		// close
 		if (closesocket(s) != 0) {
+			WSACleanup();
 			errorMessage("Error al cerrar el socket.");
 		}
 
 		float tiempo = GenerateExponentialDistribution((float)reflexTime);
+		QueryPerformanceCounter(&timeEnd);
 
-		threadInfo[threadNum].reflex[i] = tiempo;
-		threadInfo[threadNum].contPet++;
 
-		Sleep(tiempo*1000);
-	}
+		if (timeStart.QuadPart > tickStart.QuadPart&& timeEnd.QuadPart < tickEnd.QuadPart) {
+			threadInfo[threadNum].responseTime[threadInfo[threadNum].petitionCounter] = (float)TimeDiff(timeStart, timeEnd);
+			threadInfo[threadNum].reflex[threadInfo[threadNum].petitionCounter] = tiempo;
+			threadInfo[threadNum].ciclosIniPeticion[threadInfo[threadNum].petitionCounter] = (unsigned)(timeStart.QuadPart - tickBase.QuadPart);
+			threadInfo[threadNum].ciclosFinPeticion[threadInfo[threadNum].petitionCounter] = (unsigned)(timeEnd.QuadPart - tickBase.QuadPart);
+
+			threadInfo[threadNum].petitionCounter++;
+			if (threadInfo[threadNum].petitionCounter > MAXPETITIONS) {
+				errorMessage("Superado el limite de peticiones por hilo.");
+			}
+		}
+
+		Sleep((int) (tiempo*1000));
+
+	} while (timeStart.QuadPart < tickEnd.QuadPart);
 
 	return 0;
 }
@@ -108,30 +147,62 @@ DWORD WINAPI Usuario(LPVOID parameter) {
 int main(int argc, char *argv[]) {
 	HANDLE handleThread[MAXUSERS];
 	int parametro[MAXUSERS];
+	int segCal;
+	int segMed;
 
-	if (argc != 4) {
+	time_t timeIniExp;
+	time_t timeIniMed;
+	time_t timeFinMed;
+
+	if (argc != 6) {
 		cout << "Introducir num. usuarios: ";
 		cin >> totalUsers;
 		cout << "Introducir num. peticiones por usuario: ";
 		cin >> petitionsPerUser;
 		cout << "Tiempo de reflexion despues de cada peticion: ";
 		cin >> reflexTime;
+		cout << "Introduzca el tiempo de calentamiento (en segundos): ";
+		cin >> segCal;
+		cout << "Introduzca el tiempo de medición (en segundos): ";
+		cin >> segMed;
 	}
 	else {
 		totalUsers = atoi(argv[1]);
 		petitionsPerUser = atoi(argv[2]);
 		reflexTime = atof(argv[3]);
+		segCal = atoi(argv[4]);
+		segMed = atoi(argv[5]);
 
 		cout << "Num. usuarios: " << totalUsers << endl;
 		cout << "Num. peticiones: " << petitionsPerUser << endl;
 		cout << "Tiempo de reflexion: " << reflexTime << endl;
+		cout << "Tiempo de calentamiento: " << segCal << endl;
+		cout << "Tiempo de medición: " << segMed << endl;
 	}
 
 	cout << "Utilizando IP " << SERVERIP << endl;
 
-	if (totalUsers > MAXUSERS || petitionsPerUser > MAXPETITIONS) {
+	if (totalUsers > MAXUSERS || petitionsPerUser > MAXPETITIONS ||
+			totalUsers <= 0 || petitionsPerUser <= 0 || reflexTime <= 0 ||
+				segCal <= 0 || segMed <= 0) {
 		errorMessage("Arumentos invalidos.");
 	}
+
+	time(&timeIniExp);
+	timeIniMed = timeIniExp + segCal;
+	timeFinMed = timeIniMed + segMed;
+
+	LARGE_INTEGER ticksPerSec;
+	if (!QueryPerformanceFrequency(&ticksPerSec)) {
+		cout << "No esta disponible el contador de alto rendimiento." << endl;
+		exit(EXIT_FAILURE);
+	}
+
+	ticksPerMs = (float)(ticksPerSec.LowPart / 1E3);
+
+	QueryPerformanceCounter(&tickBase);
+	tickStart.QuadPart = tickBase.QuadPart + (LONGLONG)(segCal * 1000 * ticksPerMs);
+	tickEnd.QuadPart = tickStart.QuadPart + (LONGLONG)(segMed * 1000 * ticksPerMs);
 
 	// init socket connection
 	WORD wVersionRequested = MAKEWORD(2, 0);
@@ -160,29 +231,39 @@ int main(int argc, char *argv[]) {
 	WSACleanup();
 
 	ofstream output("output.csv");
-	output << "User,Counter,";
+	output << "User,Petition,Reflex,Tstart,Tend";
 	for (int i = 0; i < totalUsers; i++) {
 		output << "Time" << i << ",";
 	}
 	output << "Total" << endl;
 
-	cout << endl << "RESULTADOS:" << endl;
+	float responseTime = 0;
+	float responseTime2 = 0;
+	float taux1, taux2;
+	int totalPetitions = 0;
+
+
 	for (int i = 0; i < totalUsers; i++) {
-		auto cont = threadInfo[i].contPet;
-		cout << "Usuario: " << i << ", contador: " << cont;
-		output << i << "," << cont << ",";
-		
-		float totalReflex = 0;
+		totalPetitions += threadInfo[i].petitionCounter;
+	
 		for (int j = 0; j < petitionsPerUser; j++) {
 			auto reflex = threadInfo[i].reflex[j];
-			output << reflex << ",";
-			totalReflex += reflex;
-		}
+			responseTime += threadInfo[i].responseTime[j];
+			taux1 = threadInfo[i].ciclosIniPeticion[j] / ticksPerMs;
+			taux2 = threadInfo[i].ciclosFinPeticion[j] / ticksPerMs;
+			responseTime2 += taux2 - taux1;
 
-		cout << ", tiempo total de espera: " << totalReflex;
-		cout << " (medio: " << totalReflex / petitionsPerUser << ")" << endl;
-		output << totalReflex << endl;
+			output << i << "," << j << "," << reflex << "," << taux1 << "," << taux2 << endl;
+		}
 	}
+
+	cout << endl << "RESULTADOS:" << endl;
+	cout << "Num. peticiones: " << totalPetitions << endl;
+	cout << "Segmento de medicion: " << segMed << endl;
+	cout << "Tiempo de respuesta 1: " << (float)responseTime / ticksPerMs << endl;
+	cout << "Tiempo de respuesta 2: " << (float)responseTime2 / ticksPerMs << endl;
+	cout << "Productividad: " << (float)totalPetitions / segMed << endl;
+
 
 	output.close();
 }
