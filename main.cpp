@@ -12,10 +12,9 @@ constexpr unsigned int MAXPETITIONS = 1000;
 constexpr unsigned int PORT = 57000;
 constexpr unsigned int PETITION_SIZE = 1250;
 constexpr unsigned int RESPONSE_SIZE = 1250;
-constexpr auto SERVERIP = "127.0.0.1"; // 192.168.203.231
+constexpr auto SERVERIP = "192.168.203.231"; // 192.168.203.231
 
 unsigned int totalUsers;
-unsigned int petitionsPerUser;
 float reflexTime;
 float ticksPerMs;
 LARGE_INTEGER tickBase;
@@ -111,7 +110,6 @@ DWORD WINAPI Usuario(LPVOID parameter) {
 			errorMessage("Error al recibir la respuesta.");
 		}
 
-		cout << ". ";
 
 		// close
 		if (closesocket(s) != 0) {
@@ -154,11 +152,9 @@ int main(int argc, char *argv[]) {
 	time_t timeIniMed;
 	time_t timeFinMed;
 
-	if (argc != 6) {
+	if (argc != 5) {
 		cout << "Introducir num. usuarios: ";
 		cin >> totalUsers;
-		cout << "Introducir num. peticiones por usuario: ";
-		cin >> petitionsPerUser;
 		cout << "Tiempo de reflexion despues de cada peticion: ";
 		cin >> reflexTime;
 		cout << "Introduzca el tiempo de calentamiento (en segundos): ";
@@ -168,13 +164,11 @@ int main(int argc, char *argv[]) {
 	}
 	else {
 		totalUsers = atoi(argv[1]);
-		petitionsPerUser = atoi(argv[2]);
-		reflexTime = atof(argv[3]);
-		segCal = atoi(argv[4]);
-		segMed = atoi(argv[5]);
+		reflexTime = atof(argv[2]);
+		segCal = atoi(argv[3]);
+		segMed = atoi(argv[4]);
 
 		cout << "Num. usuarios: " << totalUsers << endl;
-		cout << "Num. peticiones: " << petitionsPerUser << endl;
 		cout << "Tiempo de reflexion: " << reflexTime << endl;
 		cout << "Tiempo de calentamiento: " << segCal << endl;
 		cout << "Tiempo de medición: " << segMed << endl;
@@ -182,9 +176,9 @@ int main(int argc, char *argv[]) {
 
 	cout << "Utilizando IP " << SERVERIP << endl;
 
-	if (totalUsers > MAXUSERS || petitionsPerUser > MAXPETITIONS ||
-			totalUsers <= 0 || petitionsPerUser <= 0 || reflexTime <= 0 ||
-				segCal <= 0 || segMed <= 0) {
+	if (totalUsers > MAXUSERS ||
+			totalUsers <= 0 || reflexTime <= 0 ||
+				segCal < 0 || segMed <= 0) {
 		errorMessage("Arumentos invalidos.");
 	}
 
@@ -215,7 +209,7 @@ int main(int argc, char *argv[]) {
 		errorMessage("La liberia no soporta la version 2.0");
 	}
 
-	cout << "Transmitiendo ";
+	cout << "Transmitiendo...";
 	for (int i = 0; i < totalUsers; i++) {
 		parametro[i] = i;
 		handleThread[i] = CreateThread(NULL, 0, Usuario, &parametro[i], 0, NULL);
@@ -232,10 +226,6 @@ int main(int argc, char *argv[]) {
 
 	ofstream output("output.csv");
 	output << "User,Petition,Reflex,Tstart,Tend";
-	for (int i = 0; i < totalUsers; i++) {
-		output << "Time" << i << ",";
-	}
-	output << "Total" << endl;
 
 	float responseTime = 0;
 	float responseTime2 = 0;
@@ -246,7 +236,7 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; i < totalUsers; i++) {
 		totalPetitions += threadInfo[i].petitionCounter;
 	
-		for (int j = 0; j < petitionsPerUser; j++) {
+		for (int j = 0; j < threadInfo[i].petitionCounter; j++) {
 			auto reflex = threadInfo[i].reflex[j];
 			responseTime += threadInfo[i].responseTime[j];
 			taux1 = threadInfo[i].ciclosIniPeticion[j] / ticksPerMs;
