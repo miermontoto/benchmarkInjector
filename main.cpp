@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
 		cin >> reflexTime;
 		cout << "Introduzca el tiempo de calentamiento (en segundos): ";
 		cin >> segCal;
-		cout << "Introduzca el tiempo de medición (en segundos): ";
+		cout << "Introduzca el tiempo de mediciÃ³n (en segundos): ";
 		cin >> segMed;
 	}
 	else {
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
 		cout << "Num. usuarios: " << totalUsers << endl;
 		cout << "Tiempo de reflexion: " << reflexTime << endl;
 		cout << "Tiempo de calentamiento: " << segCal << endl;
-		cout << "Tiempo de medición: " << segMed << endl;
+		cout << "Tiempo de mediciÃ³n: " << segMed << endl;
 	}
 
 	cout << "Utilizando IP " << SERVERIP << endl;
@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
 	WSACleanup();
 
 	ofstream output("output.csv");
-	output << "User,Petition,Reflex,Tstart,Tend";
+	output << "User,Petition,Reflex,Tstart,Tend" << endl;
 
 	float responseTime = 0;
 	float responseTime2 = 0;
