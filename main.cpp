@@ -250,11 +250,12 @@ int main(int argc, char *argv[]) {
 	cout << endl << "RESULTADOS:" << endl;
 	cout << "Num. peticiones: " << totalPetitions << endl;
 	cout << "Segmento de medicion: " << segMed << endl;
-	cout << "Tiempo de respuesta 1: " << (float)responseTime / ticksPerMs << endl;
-	cout << "Tiempo de respuesta 2: " << (float)responseTime2 / ticksPerMs << endl;
+	cout << "Tiempo de respuesta 1: " << (float)responseTime / totalPetitions << endl;
+	cout << "Tiempo de respuesta 2: " << (float)responseTime2 / totalPetitions << endl;
 	cout << "Productividad: " << (float)totalPetitions / segMed << endl;
 
+	char string[26];
+	output << endl << ctime_s(string, sizeof(string), &timeIniMed) << "," << ctime_s(string, sizeof(string), &timeFinMed);
 
 	output.close();
 }
-
