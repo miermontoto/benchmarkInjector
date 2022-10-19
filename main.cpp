@@ -7,8 +7,8 @@
 #include <math.h> // HighPart, LowPart, QuadPart
 using namespace std; // this removes the need of writing "std::"" every time.
 
-constexpr unsigned int MAXUSERS = 1000;
-constexpr unsigned int MAXPETITIONS = 1000;
+constexpr unsigned int MAXUSERS = 10000;
+constexpr unsigned int MAXPETITIONS = 10000;
 constexpr unsigned int PORT = 57000;
 constexpr unsigned int PETITION_SIZE = 1250;
 constexpr unsigned int RESPONSE_SIZE = 1250;
@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
 		cin >> reflexTime;
 		cout << "Introduzca el tiempo de calentamiento (en segundos): ";
 		cin >> segCal;
-		cout << "Introduzca el tiempo de medición (en segundos): ";
+		cout << "Introduzca el tiempo de medicion (en segundos): ";
 		cin >> segMed;
 	}
 	else {
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
 		cout << "Num. usuarios: " << totalUsers << endl;
 		cout << "Tiempo de reflexion: " << reflexTime << endl;
 		cout << "Tiempo de calentamiento: " << segCal << endl;
-		cout << "Tiempo de medición: " << segMed << endl;
+		cout << "Tiempo de medicion: " << segMed << endl;
 	}
 
 	cout << "Utilizando IP " << SERVERIP << endl;
@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
 	WSACleanup();
 
 	ofstream output("output.csv");
-	output << "User,Petition,Reflex,Tstart,Tend" << endl;
+	output << "User,Petition,Reflex,Tstart,Tend,Tres" << endl;
 
 	float responseTime = 0;
 	float responseTime2 = 0;
@@ -241,21 +241,17 @@ int main(int argc, char *argv[]) {
 			responseTime += threadInfo[i].responseTime[j];
 			taux1 = threadInfo[i].ciclosIniPeticion[j] / ticksPerMs;
 			taux2 = threadInfo[i].ciclosFinPeticion[j] / ticksPerMs;
-			responseTime2 += taux2 - taux1;
+			responseTime2 = taux2 - taux1;
 
-			output << i << "," << j << "," << reflex << "," << taux1 << "," << taux2 << endl;
+			output << i << "," << j << "," << reflex << "," << taux1 << "," << taux2 << "," << responseTime2 << endl;
 		}
 	}
 
 	cout << endl << "RESULTADOS:" << endl;
 	cout << "Num. peticiones: " << totalPetitions << endl;
 	cout << "Segmento de medicion: " << segMed << endl;
-	cout << "Tiempo de respuesta 1: " << (float)responseTime / totalPetitions << endl;
-	cout << "Tiempo de respuesta 2: " << (float)responseTime2 / totalPetitions << endl;
 	cout << "Productividad: " << (float)totalPetitions / segMed << endl;
-
-	char string[26];
-	output << endl << ctime_s(string, sizeof(string), &timeIniMed) << "," << ctime_s(string, sizeof(string), &timeFinMed);
+	cout << "Tiempo de respuesta: " << (float)responseTime / totalPetitions << endl;
 
 	output.close();
 }
